@@ -1,0 +1,6 @@
+import { notFound } from "next/navigation";
+import { getCategories, getGamesByCategory } from "@/lib/game-db";
+import { GameCard } from "@/components/GameCard";
+export const dynamic = "force-dynamic";
+export async function generateMetadata({params}:{params:Promise<{slug:string}>}){const {slug}=await params;const categories=await getCategories();const c=categories.find(x=>x.slug===slug);return c?{title:c.name,description:c.description}:{};}
+export default async function CategoryPage({params}:{params:Promise<{slug:string}>}){const {slug}=await params;const categories=await getCategories();const category=categories.find(x=>x.slug===slug);if(!category)notFound();const dbGames=await getGamesByCategory(slug);const games=dbGames.map(g=>({title:g.title,slug:g.slug,category:g.category.name,image:g.image,hot:g.hot,version:g.version,size:g.size,updated:g.updatedLabel,description:g.shortDescription,longDescription:g.description,features:Array.isArray(g.features)?g.features as string[]:[],downloadUrl:g.downloadUrl}));return <div className="container page-space"><div className="category-hero"><span className="eyebrow">CATEGORY</span><h1>{category.name}</h1><p>{category.description}</p></div><div className="game-grid game-grid-wide">{games.map(game=><GameCard key={game.slug} game={game}/>)}</div></div>}

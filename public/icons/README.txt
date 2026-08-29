@@ -1,0 +1,1 @@
+Place favicon/app icons here when branding is finalized.

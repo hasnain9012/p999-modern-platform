@@ -1,0 +1,20 @@
+image: node:22-alpine
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+
+stages:
+  - build
+
+build:
+  stage: build
+  script:
+    - npm ci
+    - npm run build
+  variables:
+    NEXT_TELEMETRY_DISABLED: "1"
+  only:
+    - main
+    - master

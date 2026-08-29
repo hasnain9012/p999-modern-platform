@@ -1,0 +1,1 @@
+Replace this folder with licensed promotional banner assets. The frontend currently uses CSS artwork so the repository is self-contained.

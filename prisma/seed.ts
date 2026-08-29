@@ -23,7 +23,7 @@ const categoryData = [
   ["Fishing", "fishing", "🐟", "Fishing-themed games."],
   ["Live", "live", "🎥", "Live game experiences."],
   ["Sports", "sports", "⚽", "Sports-themed games."],
-  ["Demo", "demo", "🎯", "Demo and preview experiences."],
+  ["Demo", "demo", "🎯", "Demo and preview experiences."]
 ] as const;
 
 const games = [
@@ -42,6 +42,7 @@ const games = [
 ] as const;
 
 async function main() {
+<<<<<<< HEAD
   // -----------------------------
   // Categories
   // -----------------------------
@@ -49,6 +50,9 @@ async function main() {
     i,
     [name, slug, icon, description],
   ] of categoryData.entries()) {
+=======
+  for (const [i, [name, slug, icon, description]] of categoryData.entries()) {
+>>>>>>> eac873e (Fix Prisma seed and database configuration)
     await prisma.category.upsert({
       where: {
         slug,

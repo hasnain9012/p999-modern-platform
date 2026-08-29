@@ -4,9 +4,16 @@ import { PrismaNeon } from "@prisma/adapter-neon";
 import bcrypt from "bcryptjs";
 
 const connectionString = process.env.DATABASE_URL;
-if (!connectionString) throw new Error("DATABASE_URL is required for seeding.");
 
-const prisma = new PrismaClient({ adapter: new PrismaNeon({ connectionString }) });
+if (!connectionString) {
+  throw new Error("DATABASE_URL is required for seeding.");
+}
+
+const prisma = new PrismaClient({
+  adapter: new PrismaNeon({
+    connectionString,
+  }),
+});
 
 const categoryData = [
   ["Hot", "hot", "🔥", "Popular games selected for quick discovery."],
@@ -16,7 +23,7 @@ const categoryData = [
   ["Fishing", "fishing", "🐟", "Fishing-themed games."],
   ["Live", "live", "🎥", "Live game experiences."],
   ["Sports", "sports", "⚽", "Sports-themed games."],
-  ["Demo", "demo", "🎯", "Demo and preview experiences."]
+  ["Demo", "demo", "🎯", "Demo and preview experiences."],
 ] as const;
 
 const games = [
@@ -31,26 +38,73 @@ const games = [
   ["Card Master", "card-master", "Cards", "cards.svg", false],
   ["Fishing King", "fishing-king", "Fishing", "fishing.svg", false],
   ["Live Studio", "live-studio", "Live", "live.svg", false],
-  ["Sports Arena", "sports-arena", "Sports", "sports.svg", false]
+  ["Sports Arena", "sports-arena", "Sports", "sports.svg", false],
 ] as const;
 
 async function main() {
-  for (const [i, [name, slug, iconCategory, icon, description]] of categoryData.entries()) {
+  // -----------------------------
+  // Categories
+  // -----------------------------
+  for (const [
+    i,
+    [name, slug, icon, description],
+  ] of categoryData.entries()) {
     await prisma.category.upsert({
-      where: { slug },
-      update: { name, icon, description, sortOrder: i, active: true },
-      create: { name, slug, icon, description, sortOrder: i }
+      where: {
+        slug,
+      },
+      update: {
+        name,
+        icon,
+        description,
+        sortOrder: i,
+        active: true,
+      },
+      create: {
+        name,
+        slug,
+        icon,
+        description,
+        sortOrder: i,
+        active: true,
+      },
     });
   }
 
-  const categoryMap = new Map((await prisma.category.findMany()).map((c) => [c.name, c.id]));
+  // -----------------------------
+  // Category map
+  // -----------------------------
+  const categoryMap = new Map(
+    (
+      await prisma.category.findMany({
+        select: {
+          id: true,
+          name: true,
+        },
+      })
+    ).map((category) => [category.name, category.id])
+  );
 
-  for (const [i, [title, slug, categoryName, imageFile, hot]] of games.entries()) {
+  // -----------------------------
+  // Games
+  // -----------------------------
+  for (const [
+    i,
+    [title, slug, categoryName, imageFile, hot],
+  ] of games.entries()) {
     const categoryId = categoryMap.get(categoryName);
-    if (!categoryId) throw new Error(`Missing category ${categoryName}`);
+
+    if (!categoryId) {
+      throw new Error(`Missing category: ${categoryName}`);
+    }
+
     const description = `Explore ${title}, a responsive ${categoryName.toLowerCase()} experience built for quick browsing and easy access.`;
+
     const game = await prisma.game.upsert({
-      where: { slug },
+      where: {
+        slug,
+      },
+
       update: {
         title,
         categoryId,
@@ -60,8 +114,14 @@ async function main() {
         sortOrder: i,
         shortDescription: description,
         description,
-        features: ["Responsive interface", "Fast-loading game page", "Mobile-friendly layout", "Clear game information"]
+        features: [
+          "Responsive interface",
+          "Fast-loading game page",
+          "Mobile-friendly layout",
+          "Clear game information",
+        ],
       },
+
       create: {
         title,
         slug,
@@ -76,28 +136,86 @@ async function main() {
         size: "45 MB",
         developer: "Publisher",
         updatedLabel: "August 2026",
-        features: ["Responsive interface", "Fast-loading game page", "Mobile-friendly layout", "Clear game information"]
-      }
+        features: [
+          "Responsive interface",
+          "Fast-loading game page",
+          "Mobile-friendly layout",
+          "Clear game information",
+        ],
+      },
     });
 
+    // -----------------------------
+    // Game SEO
+    // -----------------------------
     await prisma.gameSEO.upsert({
-      where: { gameId: game.id },
-      update: { seoTitle: `${title} — ${categoryName}`, metaDescription: description, schemaType: "VideoGame" },
-      create: { gameId: game.id, seoTitle: `${title} — ${categoryName}`, metaDescription: description, schemaType: "VideoGame" }
+      where: {
+        gameId: game.id,
+      },
+
+      update: {
+        seoTitle: `${title} — ${categoryName}`,
+        metaDescription: description,
+        schemaType: "VideoGame",
+      },
+
+      create: {
+        gameId: game.id,
+        seoTitle: `${title} — ${categoryName}`,
+        metaDescription: description,
+        schemaType: "VideoGame",
+      },
     });
   }
 
+  // -----------------------------
+  // Admin User
+  // -----------------------------
   const email = process.env.ADMIN_EMAIL || "admin@example.com";
   const password = process.env.ADMIN_PASSWORD || "CHANGE_THIS";
-  if (password === "CHANGE_THIS") throw new Error("Set ADMIN_PASSWORD before running db:seed.");
+  const name = process.env.ADMIN_NAME || "Site Admin";
+
+  if (password === "CHANGE_THIS") {
+    throw new Error("Set ADMIN_PASSWORD before running db:seed.");
+  }
+
   const passwordHash = await bcrypt.hash(password, 12);
+
   await prisma.user.upsert({
-    where: { email },
-    update: { passwordHash, name: process.env.ADMIN_NAME || "Site Admin", role: "SUPER_ADMIN", active: true },
-    create: { email, passwordHash, name: process.env.ADMIN_NAME || "Site Admin", role: "SUPER_ADMIN" }
+    where: {
+      email,
+    },
+
+    update: {
+      passwordHash,
+      name,
+      role: "SUPER_ADMIN",
+      active: true,
+    },
+
+    create: {
+      email,
+      passwordHash,
+      name,
+      role: "SUPER_ADMIN",
+      active: true,
+    },
   });
 
+  console.log("=================================");
   console.log("Neon database seeded successfully.");
+  console.log(`Categories: ${categoryData.length}`);
+  console.log(`Games: ${games.length}`);
+  console.log(`Admin: ${email}`);
+  console.log("=================================");
 }
 
-main().catch((error) => { console.error(error); process.exit(1); }).finally(() => prisma.$disconnect());
+main()
+  .catch((error) => {
+    console.error("Seed failed:");
+    console.error(error);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
